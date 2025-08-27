@@ -1,0 +1,47 @@
+[project]
+name = "aigc-sdk"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "dfss>=1.10.4",
+    "fastapi>=0.116.1",
+    "gradio>=5.44.0",
+    "more-itertools>=10.7.0",
+    "numba>=0.61.2",
+    "opencc>=1.1.9",
+    "opencv-python-headless>=4.12.0.88",
+    "pybind11[global]>=3.0.1",
+    "qwen-vl-utils>=0.0.11",
+    "tiktoken>=0.11.0",
+    "torch>=2.8.0",
+    "torchaudio>=2.8.0",
+    "torchvision>=0.23.0",
+    "transformers>=4.49.0",
+    "untool>=0.2.2",
+]
+
+[tool.uv.sources]
+torch = { index = "pytorch" }
+torchvision = { index = "pytorch" }
+torchaudio = { index = "pytorch" }
+
+[tool.uv]
+python-downloads = "automatic"
+python-install-mirror = "https://ghfast.top/github.com/indygreg/python-build-standalone/releases/download"
+cache-dir = "./tmpdir"
+
+[[tool.uv.index]]
+url = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple"
+default = true
+
+[[tool.uv.index]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.workspace]
+members = [
+    "AIGC-SDK",
+]
