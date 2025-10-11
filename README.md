@@ -4,19 +4,17 @@
 
 ## 支持api列表
 
-| 模块名称                                                 | 功能描述                                                                | 模型大小 | api router                                      | 视频教程                                          |
-| -------------------------------------------------------- | ----------------------------------------------------------------------- | -------- | ----------------------------------------------- | ------------------------------------------------- |
-| llm_general                                              | 通用LLM（Qwen2.5、Qwen3、DeepSeek-R1-0528-Qwen3、Llama3.2、MiniCPM3等） |          | `/v1/chat/completions`                        | [llm_general](https://b23.tv/LcL4yQR)                |
-| llm_general_v2                                           | 同上                                                                    |          | `/v1/chat/completions`                        | [同llm_general](https://b23.tv/LcL4yQR)              |
-| qwen2_5vl                                                | Qwen2.5-VL 专用                                                         | 2.4 GB + | `/v1/chat/completions`                        | [qwen2_5vl &amp; emotivoice](https://b23.tv/nwrwxe4) |
-| minicpmv                                                 | MiniCPM-V2.6 等                                                         | 2.4 GB + | `/v1/chat/completions`                        |                                                   |
-| [bmwhisper](https://github.com/wlc952/whisper-TPU.git)      | whisper 语言转文本                                                      | 844 MB   | `/v0/audio/transcriptions`                    |                                                   |
-| [emotivoice](https://github.com/ZillaRU/EmotiVoice-TPU.git) | 文本转语音（支持情感控制）`<br>`音色克隆                              | 467 MB   | `/v1/audio/speech<br>``/v1/audio/translation` | [qwen2_5vl &amp; emotivoice](https://b23.tv/nwrwxe4) |
-| [rmbg](https://github.com/wlc952/rmbg_tpu.git)              | 图像去背景                                                              | 88 MB    | `/v1/images/edit`                             |                                                   |
-| [upscaler](https://github.com/ZillaRU/upscaler_tpu.git)     | 图像超分                                                                | 45 M     | `/v1/images/edit`                             |                                                   |
-| [indextts](https://github.com/wlc952/index-tts.git)         | 音色克隆                                                                | 823 MB   | `/v0/audio/speech`                            |                                                   |
-
-                                                               |                                   |
+| 模块名称                                                 | 功能描述                                                                | api router                                      | 视频教程                                          |
+| -------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------- |
+| llm_general                                              | 通用LLM（Qwen2.5、Qwen3、DeepSeek-R1-0528-Qwen3、Llama3.2、MiniCPM3等） | `/v1/chat/completions`                        | [llm_general](https://b23.tv/LcL4yQR)                |
+| llm_general_v2                                           | 同上，python封装，可修改。                                              | `/v1/chat/completions`                        | [同llm_general](https://b23.tv/LcL4yQR)              |
+| qwen2_5vl                                                | Qwen2.5-VL                                                              | `/v1/chat/completions`                        | [qwen2_5vl &amp; emotivoice](https://b23.tv/nwrwxe4) |
+| minicpmv                                                 | MiniCPM-V2.6 等                                                         | `/v1/chat/completions`                        |                                                   |
+| [bmwhisper](https://github.com/wlc952/whisper-TPU.git)      | whisper 语言转文本                                                      | `/v0/audio/transcriptions`                    |                                                   |
+| [emotivoice](https://github.com/ZillaRU/EmotiVoice-TPU.git) | 文本转语音（支持情感控制）`<br>`音色克隆                              | `/v1/audio/speech<br>``/v1/audio/translation` | [qwen2_5vl &amp; emotivoice](https://b23.tv/nwrwxe4) |
+| [rmbg](https://github.com/wlc952/rmbg_tpu.git)              | 图像去背景                                                              | `/v1/images/edit`                             |                                                   |
+| [upscaler](https://github.com/ZillaRU/upscaler_tpu.git)     | 图像超分                                                                | `/v1/images/edit`                             |                                                   |
+| [indextts](https://github.com/wlc952/index-tts.git)         | 音色克隆                                                                | `/v0/audio/speech`                            |                                                   |
 
 ## 启动 API
 
