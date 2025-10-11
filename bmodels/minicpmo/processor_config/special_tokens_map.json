@@ -1,0 +1,137 @@
+{
+  "additional_special_tokens": [
+    {
+      "content": "<image>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false
+    },
+    {
+      "content": "</image>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false
+    },
+    {
+      "content": "<ref>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false
+    },
+    {
+      "content": "</ref>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false
+    },
+    {
+      "content": "<box>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false
+    },
+    {
+      "content": "</box>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false
+    },
+    {
+      "content": "<quad>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false
+    },
+    {
+      "content": "</quad>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false
+    },
+    {
+      "content": "<point>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false
+    },
+    {
+      "content": "</point>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false
+    },
+    {
+      "content": "<slice>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false
+    },
+    {
+      "content": "</slice>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false
+    },
+    {
+      "content": "<image_id>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false
+    },
+    {
+      "content": "</image_id>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false
+    },
+    {
+      "content": "<audio>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false
+    },
+    {
+      "content": "</audio>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false
+    }
+  ],
+  "bos_token": {
+    "content": "<s>",
+    "lstrip": false,
+    "normalized": false,
+    "rstrip": false,
+    "single_word": false
+  },
+  "eos_token": {
+    "content": "<|im_end|>",
+    "lstrip": false,
+    "normalized": false,
+    "rstrip": false,
+    "single_word": false
+  },
+  "unk_token": {
+    "content": "<unk>",
+    "lstrip": false,
+    "normalized": false,
+    "rstrip": false,
+    "single_word": false
+  }
+}

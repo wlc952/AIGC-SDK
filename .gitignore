@@ -8,3 +8,31 @@ wheels/
 
 # Virtual environments
 .venv
+*.bmodel
+tmpdir/
+*.vscode
+*__pycache__*
+*build
+*cpython*
+*venv
+*.bmodel
+*.tar*
+*.pth
+*.DS_Store
+*tmpdir
+*temp
+*pdf
+*onnx
+*log
+*pid
+*.npz
+*.npy
+bmodels/deepseek
+bmodels/emotivoice
+bmodels/sherpa
+bmodels/rmbg
+bmodels/bmwhisper
+bmodels/sd_lcm
+bmodels/*.zip
+samples/BabelDOC/BabelDOC
+repo/bmwhisper/assets

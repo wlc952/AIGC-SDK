@@ -1,25 +1,50 @@
 [project]
 name = "aigc-sdk"
 version = "0.1.0"
-description = "Add your description here"
+description = "AIGC API Service"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "argparse>=1.4.0",
+    "dfn>=1.5.0",
     "dfss>=1.10.4",
+    "diffusers>=0.35.1",
+    "einops>=0.8.1",
     "fastapi>=0.116.1",
+    "g2p-en>=2.1.0",
     "gradio>=5.44.0",
+    "insightface>=0.7.3",
+    "jieba>=0.42.1",
+    "lark>=1.3.0",
+    "librosa>=0.11.0",
     "more-itertools>=10.7.0",
+    "nasops>=0.1.2",
+    "nltk>=3.9.2",
     "numba>=0.61.2",
+    "omegaconf>=2.3.0",
+    "onnxruntime>=1.23.1",
     "opencc>=1.1.9",
     "opencv-python-headless>=4.12.0.88",
+    "pillow>=11.3.0",
     "pybind11[global]>=3.0.1",
+    "pydub>=0.25.1",
+    "pypinyin>=0.55.0",
     "qwen-vl-utils>=0.0.11",
+    "scipy>=1.15.3",
+    "sentencepiece>=0.2.1",
+    "soundfile>=0.13.1",
     "tiktoken>=0.11.0",
+    "tokenizers>=0.22.1",
     "torch>=2.8.0",
     "torchaudio>=2.8.0",
+    "torchsde>=0.2.6",
     "torchvision>=0.23.0",
+    "tqdm>=4.67.1",
     "transformers>=4.49.0",
     "untool>=0.2.2",
+    "wetext>=0.1.0",
+    "whisper-timestamped>=1.15.9",
+    "yacs>=0.1.8",
 ]
 
 [tool.uv.sources]

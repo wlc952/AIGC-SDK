@@ -1,0 +1,51 @@
+# 存储bmodel和tokenizer的路径
+llm:
+  qwen2.5-1.5b: 
+    model_path: bmodels/qwen2_5/qwen2.5-1.5b_int4_seq2048_1dev.bmodel
+    token_path: bmodels/qwen2_5/token_config
+  qwen2.5-3b: 
+    model_path: bmodels/qwen2_5/qwen2.5-3b-instruct-gptq-int4_w4bf16_seq2048_bm1684x_1dev_20250620_134431.bmodel
+    token_path: bmodels/qwen2_5/token_config
+  qwen2.5-7b: 
+    model_path: bmodels/qwen2_5/qwen2.5-7b-instruct-awq_w4bf16_seq2048_bm1684x_1dev_20250616_191537.bmodel
+    token_path: bmodels/qwen2_5/token_config
+  qwen3-1.7b: 
+    model_path: bmodels/qwen3/qwen3-1.7b_w4bf16_seq2048_bm1684x_1dev_20250528_173737.bmodel
+    token_path: bmodels/qwen3/token_config
+  qwen3-4b: 
+    model_path: bmodels/qwen3/qwen3-4b-awq_w4bf16_seq512_bm1684x_1dev_20250514_161445.bmodel
+    token_path: bmodels/qwen3/token_config
+  deepseek-r1-0528-qwen3-8b:
+    model_path: bmodels/deepseek/deepseek-r1-0528-qwen3-8b/deepseek-r1-0528-qwen3-8b_w4bf16_seq512_bm1684x_1dev_20250604_114320.bmodel
+    token_path: bmodels/deepseek/deepseek-r1-0528-qwen3-8b/config
+  llama3.2-3b:
+    model_path: bmodels/llama3_2/llama-3.2-3b-instruct_w4f16_seq512_bm1684x_1dev_20250526_160605.bmodel
+    token_path: bmodels/llama3_2/token_config
+  megrez-3b:
+    model_path: bmodels/megrez/megrez_bm1684x_int4_seq512.bmodel
+    token_path: bmodels/megrez/token_config
+
+
+minicpmv:
+  minicpmv26:
+    model_path: bmodels/minicpmv/minicpmv26_bm1684x_int4_seq512.bmodel
+    token_path: bmodels/minicpmv/processor_config
+  minicpm3o:
+    model_path: bmodels/minicpmo/minicpm3o_bm1684x_int4_seq512.bmodel
+    token_path: bmodels/minicpmo/processor_config
+
+
+qwen2_5vl:
+  qwen2.5-vl-3b:
+    model_path: bmodels/qwen2_5vl/qwen2.5-vl-3b-instruct-awq_w4bf16_seq256_bm1684x_1dev_imsz280.bmodel
+    token_path: bmodels/qwen2_5vl/processor_config
+  qwen2.5-vl-7b:
+    model_path: bmodels/qwen2_5vl/qwen2.5-vl-7b-instruct-awq_w4bf16_seq512_bm1684x_1dev_20250715_231901.bmodel
+    token_path: bmodels/qwen2_5vl/processor_config
+
+emotivoice:
+  voice: '1463' # 所有可选项见："./repo/emotivoice/data/youdao/text/speaker2"
+
+
+deepseek:
+  model_path: bmodels/deepseek/deepseek-r1-distill-qwen-1.5b-2048

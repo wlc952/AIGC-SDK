@@ -1,0 +1,259 @@
+{
+  "add_bos_token": true,
+  "add_eos_token": false,
+  "add_prefix_space": true,
+  "added_tokens_decoder": {
+    "0": {
+      "content": "<unk>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "1": {
+      "content": "<s>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "2": {
+      "content": "</s>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73440": {
+      "content": "<|im_end|>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73441": {
+      "content": "<|im_start|>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73442": {
+      "content": "<|tool_call|>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73443": {
+      "content": "<|execute_start|>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73444": {
+      "content": "<|execute_end|>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73445": {
+      "content": "<|fim_prefix|>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73446": {
+      "content": "<|fim_middle|>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73447": {
+      "content": "<|fim_suffix|>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73448": {
+      "content": "<image>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73449": {
+      "content": "</image>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73450": {
+      "content": "<ref>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73451": {
+      "content": "</ref>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73452": {
+      "content": "<box>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73453": {
+      "content": "</box>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73454": {
+      "content": "<quad>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73455": {
+      "content": "</quad>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73456": {
+      "content": "<point>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73457": {
+      "content": "</point>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73458": {
+      "content": "<slice>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73459": {
+      "content": "</slice>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73460": {
+      "content": "<image_id>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73461": {
+      "content": "</image_id>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73462": {
+      "content": "<audio>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "73463": {
+      "content": "</audio>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    }
+  },
+  "additional_special_tokens": [
+    "<image>",
+    "</image>",
+    "<ref>",
+    "</ref>",
+    "<box>",
+    "</box>",
+    "<quad>",
+    "</quad>",
+    "<point>",
+    "</point>",
+    "<slice>",
+    "</slice>",
+    "<image_id>",
+    "</image_id>",
+    "<audio>",
+    "</audio>"
+  ],
+  "bos_token": "<s>",
+  "chat_template": "{% for message in messages %}{{'<|im_start|>' + message['role'] + '\n' + message['content'] + '<|im_end|>' + '\n'}}{% endfor %}{% if add_generation_prompt %}{{ '<|im_start|>assistant\n' }}{% endif %}",
+  "clean_up_tokenization_spaces": false,
+  "eos_token": "<|im_end|>",
+  "legacy": true,
+  "model_max_length": 1000000000000000019884624838656,
+  "pad_token": null,
+  "sp_model_kwargs": {},
+  "spaces_between_special_tokens": false,
+  "auto_map": {
+    "AutoTokenizer": [
+      "tokenization_minicpmv_fast.MiniCPMVTokenizerFast",
+      null
+    ]
+  },
+  "tokenizer_class": "MiniCPMVTokenizerFast",
+  "unk_token": "<unk>",
+  "use_default_system_prompt": false
+}
