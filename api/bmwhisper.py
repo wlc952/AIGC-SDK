@@ -35,7 +35,7 @@ router = AppInitializationRouter(app_name=app_name)
 
 
 ### ASR；兼容openai api，audio/transcriptions
-@router.post("/v0/audio/transcriptions")
+@router.post("/v1/audio/transcriptions")
 @change_dir(router.dir)
 async def whisper(
     file: UploadFile = File(...),
