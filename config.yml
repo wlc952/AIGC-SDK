@@ -40,5 +40,12 @@ qwen2_5vl:
     model_path: bmodels/qwen2_5vl/qwen2.5-vl-7b-instruct-awq_w4bf16_seq512_bm1684x_1dev_20250715_231901.bmodel
     token_path: bmodels/qwen2_5vl/processor_config
 
+
+qwen3vl:
+  qwen3-vl-4b:
+    model_path: bmodels/qwen3vl/qwen3-vl-4b-instruct_w4bf16_seq2048_bm1684x_1dev_20251015_145353.bmodel
+    token_path: bmodels/qwen3vl/processor_config
+
+
 emotivoice:
   voice: '1463' # 所有可选项见："./repo/emotivoice/data/youdao/text/speaker2"
