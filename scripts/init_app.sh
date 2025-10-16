@@ -11,6 +11,8 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
+source .venv/bin/activate
+
 # 定义存放仓库的目录
 repo_dir="repo"
 
