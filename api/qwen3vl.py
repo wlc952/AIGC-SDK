@@ -1,4 +1,5 @@
 import os
+import subprocess
 import time
 import json
 import yaml
@@ -39,6 +40,7 @@ class AppInitializationRouter(BaseAPIRouter):
         args = argparse.Namespace(
             model_path=model_path,
             config_path=token_path,
+            video_ratio=0.25,
             devid=0,
         )
 
@@ -78,7 +80,7 @@ class ChatRequest(BaseModel):
 @change_dir(router.dir)
 async def chat_completions(request: ChatRequest):
     slm = router.llm_model
-    slm.ID_EOS = [slm.ID_IM_END, slm.ID_END]
+    ID_EOS = [slm.ID_IM_END, slm.ID_END]
 
     tmp_dir = f"{sdk_abs_path}/tmpdir"
     os.makedirs(tmp_dir, exist_ok=True)
@@ -94,63 +96,75 @@ async def chat_completions(request: ChatRequest):
                 std_content.append(x)
             elif x["type"] == "image_url":
                 image_url = x["image_url"]["url"]
-                if image_url.startswith("data:"):
-                    save_path = await base64_decode(image_url, tmp_dir)
-                else:
-                    save_path = await url_download(image_url, tmp_dir)
+                try:
+                    if image_url.startswith("data:"):
+                        save_path = await base64_decode(image_url, tmp_dir)
+                    else:
+                        save_path = await url_download(image_url, tmp_dir)
+                except Exception as e:
+                    return JSONResponse({"error": f"Error downloading image from {image_url}: {e}"}, status_code=400)
                 std_content.append({"type": "image", "image": save_path})
                 media_type = "image"
             elif x["type"] == "image":
                 image_url = x["image"]
-                if image_url.startswith("data:"):
-                    save_path = await base64_decode(image_url, tmp_dir)
-                else:
-                    save_path = await url_download(image_url, tmp_dir)
+                try:
+                    if image_url.startswith("data:"):
+                        save_path = await base64_decode(image_url, tmp_dir)
+                    else:
+                        save_path = await url_download(image_url, tmp_dir)
+                except Exception as e:
+                    return JSONResponse({"error": f"Error downloading image from {image_url}: {e}"}, status_code=400)
                 std_content.append({"type": "image", "image": save_path})
                 media_type = "image"
             elif x["type"] == "video":
                 video_url = x["video"]
-                if isinstance(video_url, str):
+                try:
                     save_path = await url_download(video_url, tmp_dir)
-                    std_content.append(
-                        {
-                            "type": "video",
-                            "video": save_path,
-                            "fps": 1.0,
-                            "min_pixels": 64 * 32 * 32,
-                            "max_pixels": slm.model.MAX_PIXELS // 4,
-                        }
-                    )
-                    media_type = "video"
+                except Exception as e:
+                    return JSONResponse({"error": f"Error downloading video from {video_url}: {e}"}, status_code=400)
+                std_content.append(
+                    {
+                        "type": "video",
+                        "video": save_path,
+                        "min_pixels": 64 * 32 * 32,
+                        "max_pixels": int(slm.model.MAX_PIXELS * slm.video_ratio),
+                    }
+                )
+                media_type = "video"
     elif isinstance(request.messages[-1]["content"], str):
         std_content.append({"type": "text", "text": request.messages[-1]["content"]})
     else:
         return JSONResponse({"error": "Invalid content type"}, status_code=400)
 
     std_messages = [{"role": "user", "content": std_content}]
-    inputs = slm.processor.apply_chat_template(std_messages,
-                                            tokenize=True,
-                                            add_generation_prompt=True,
-                                            return_dict=True,
-                                            return_tensors="pt")
+    inputs = slm.processor.apply_chat_template(
+        std_messages,
+        tokenize=True,
+        add_generation_prompt=True,
+        return_dict=True,
+        return_tensors="pt",
+    )
     token_len = inputs.input_ids.numel()
+
+    if slm.support_history:
+        if (token_len + slm.model.history_length > slm.model.SEQLEN - 128) or (
+            slm.model.history_length > slm.model.PREFILL_KV_LENGTH
+        ):
+            slm.model.clear_history()
+            slm.history_max_posid = 0
 
     # Chat
     first_start = time.time()
     slm.model.forward_embed(inputs.input_ids.squeeze(0).tolist())
     if media_type == "image":
-        vit_token_list = torch.where(inputs.input_ids == slm.ID_IMAGE_PAD)[1].tolist()
-        vit_offset = vit_token_list[0]
-        slm.vit_process_image(inputs, vit_offset)
+        slm.vit_process_image(inputs)
         position_ids = slm.get_rope_index(
             inputs.input_ids, inputs.image_grid_thw, slm.ID_IMAGE_PAD
         )
         slm.max_posid = int(position_ids.max())
         ftoken = slm.forward_prefill(position_ids.numpy())
     elif media_type == "video":
-        vit_token_list = torch.where(inputs.input_ids == slm.ID_VIDEO_PAD)[1].tolist()
-        vit_offset = vit_token_list[0]
-        slm.vit_process_video(inputs, vit_offset)
+        slm.vit_process_video(inputs)
         position_ids = slm.get_rope_index(
             inputs.input_ids, inputs.video_grid_thw, slm.ID_VIDEO_PAD
         )
@@ -199,7 +213,7 @@ async def chat_completions(request: ChatRequest):
             token = ftoken
             full_word_tokens = []
 
-            while token not in slm.ID_EOS and completion_tokens < max_tokens:
+            while token not in ID_EOS and completion_tokens < max_tokens:
                 full_word_tokens.append(token)
                 word = slm.tokenizer.decode(full_word_tokens, skip_special_tokens=True)
                 if "�" not in word:
@@ -259,7 +273,7 @@ async def chat_completions(request: ChatRequest):
         completion_tokens = 0
         token = ftoken
 
-        while token not in slm.ID_EOS and completion_tokens < max_tokens:
+        while token not in ID_EOS and completion_tokens < max_tokens:
             completion_tokens += 1
             full_word_tokens.append(token)
             slm.max_posid += 1
@@ -297,68 +311,50 @@ async def chat_completions(request: ChatRequest):
 
 
 async def url_download(url, dir):
-    src_ext = os.path.splitext(url.split("/")[-1])[1]
-    ext = src_ext if src_ext else ".jpg"
+    if url.startswith("file://"):
+        local_path = url[7:]
+        if os.path.exists(local_path):
+            return os.path.abspath(local_path)
+        else:
+            raise ValueError(f"Local file not found: {local_path}")
+    
+    if os.path.exists(url):
+        return os.path.abspath(url)
+    
+    url_path = url.split("?")[0]
+    _, ext = os.path.splitext(url_path)
+    ext = ext.lower()
+    
+    image_exts = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"}
+    video_exts = {".mp4", ".avi", ".mov", ".mkv", ".flv", ".wmv", ".webm"}
+    
+    if not ext or (ext not in image_exts and ext not in video_exts):
+        supported = ", ".join(sorted(image_exts | video_exts))
+        raise ValueError(f"Unsupported file extension: '{ext}'. Supported formats: {supported}")
+    
     temp_path = os.path.join(dir, f"temp_{uuid.uuid4()}{ext}")
-    final_path = os.path.join(dir, f"{uuid.uuid4()}{ext}")
-    os.system(f"wget {url} -O {temp_path}")
-    try:
-        img = Image.open(temp_path)
-        
-        max_width, max_height = 560, 560
-        if img.width > max_width or img.height > max_height:
-            ratio = min(max_width / img.width, max_height / img.height)
-            new_width = int(img.width * ratio)
-            new_height = int(img.height * ratio)
+    result = subprocess.run(["wget", "-q", url, "-O", temp_path], capture_output=True)
 
-            # 如果缩放比例很小，使用两步缩放以提高质量
-            if ratio < 0.5:
-                intermediate_width = int(img.width * 0.5)
-                intermediate_height = int(img.height * 0.5)
-                img = img.resize(
-                    (intermediate_width, intermediate_height), Image.Resampling.LANCZOS
-                )
-                img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-            else:
-                img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+    if result.returncode != 0:
+        error_msg = result.stderr.decode() if result.stderr else "Unknown error"
+        raise ValueError(f"Failed to download from URL: {url}. Error: {error_msg}")
+    
+    if not os.path.exists(temp_path):
+        raise ValueError(f"Downloaded file does not exist: {temp_path}")
 
-        final_path_png = os.path.join(dir, f"{uuid.uuid4()}.png")
-        img.save(final_path_png, format="PNG", optimize=True)
-        img.close()
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
-        return final_path_png
-
-    except Exception as e:
-        print(f"Error processing image from {url}: {e}")
-        if os.path.exists(temp_path):
-            os.rename(temp_path, final_path)
-            return final_path
-        return final_path
-
+    return temp_path
 
 async def base64_decode(image_url, tmp_dir):
-    base64_data = image_url.split(",")[1]
-    img_bytes = base64.b64decode(base64_data)
-    img = Image.open(BytesIO(img_bytes))
-
-    max_width, max_height = 560, 560
-    if img.width > max_width or img.height > max_height:
-        ratio = min(max_width / img.width, max_height / img.height)
-        new_width = int(img.width * ratio)
-        new_height = int(img.height * ratio)
-
-        # 如果缩放比例很小，使用两步缩放以提高质量
-        if ratio < 0.5:
-            intermediate_width = int(img.width * 0.5)
-            intermediate_height = int(img.height * 0.5)
-            img = img.resize(
-                (intermediate_width, intermediate_height), Image.Resampling.LANCZOS
-            )
-            img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-        else:
-            img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-
-    save_path = os.path.join(tmp_dir, f"{uuid.uuid4()}.png")
-    img.save(save_path, format="PNG", optimize=True)
-    return save_path
+    try:
+        if "," not in image_url:
+            raise ValueError("Invalid base64 data URI format. Expected format: 'data:image/...;base64,...'")
+        
+        base64_data = image_url.split(",")[1]
+        img_bytes = base64.b64decode(base64_data)
+        img = Image.open(BytesIO(img_bytes))
+        
+        save_path = os.path.join(tmp_dir, f"{uuid.uuid4()}.png")
+        img.save(save_path, format="PNG", optimize=True)
+        return save_path
+    except Exception as e:
+        raise ValueError(f"Failed to decode base64 image: {e}")

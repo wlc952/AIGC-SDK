@@ -1,26 +1,18 @@
-import argparse
-import asyncio
-import base64
-import json
 import os
 import time
-import uuid
-from io import BytesIO
-from pathlib import Path
-from typing import List, Optional, Union
-
-import httpx
-import numpy as np
-import torch
+import json
 import yaml
-from fastapi import HTTPException
-from fastapi.responses import JSONResponse, StreamingResponse
+import uuid
+import base64
+import asyncio
+import argparse
+import torch
+import numpy as np
 from PIL import Image
+from io import BytesIO
 from pydantic import BaseModel, Field
-from starlette.background import BackgroundTask
-
+from fastapi.responses import JSONResponse, StreamingResponse
 from qwen_vl_utils import process_vision_info
-
 from api.base_api import BaseAPIRouter, change_dir, init_helper, sdk_abs_path
 
 app_name = "qwen2_5vl"
@@ -53,140 +45,104 @@ class AppInitializationRouter(BaseAPIRouter):
 
         from repo.qwen2_5vl.python_demo.pipeline import Qwen2_5VL
 
-        pipeline = Qwen2_5VL(args)
-        self.register_model("qwen2_5vl", pipeline)
+        self.llm_model = Qwen2_5VL(args)
         return {"message": f"应用 {self.app_name} 已成功初始化。"}
+
+    async def destroy_app(self):
+        del self.llm_model
 
 
 router = AppInitializationRouter(app_name=app_name)
 
 
-class ImageURL(BaseModel):
-    url: str
-
-
-class MessageContent(BaseModel):
-    type: str
-    text: Optional[str] = None
-    image_url: Optional[ImageURL] = Field(None, alias="image_url")
-    image: Optional[str] = None
-    video: Optional[str] = None
-
-    class Config:
-        allow_population_by_field_name = True
-
-
-class ChatMessage(BaseModel):
-    role: str
-    content: Union[List[MessageContent], str]
-
-
 class ChatRequest(BaseModel):
     model: str = Field(model_name, description="Model name")
-    messages: List[ChatMessage] = Field(..., description="Message")
+    messages: list = Field(
+        [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "image": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
+                    },
+                    {"type": "text", "text": "Describe this image."},
+                ],
+            }
+        ],
+        description="Message",
+    )
     stream: bool = Field(False, description="Stream response")
 
 
 @router.post("/v1/chat/completions")
 @change_dir(router.dir)
 async def chat_completions(request: ChatRequest):
-    pipeline = router.require_model("qwen2_5vl")
-    pipeline.ID_EOS = [pipeline.ID_IM_END, pipeline.ID_END]
+    slm = router.llm_model
+    ID_EOS = [slm.ID_IM_END, slm.ID_END]
 
-    tmp_dir = Path(sdk_abs_path) / "tmpdir"
-    tmp_dir.mkdir(parents=True, exist_ok=True)
+    tmp_dir = f"{sdk_abs_path}/tmpdir"
+    os.makedirs(tmp_dir, exist_ok=True)
+    tmp_dir = os.path.abspath(tmp_dir)
 
-    cleanup_paths: List[Path] = []
-    std_content: list[dict] = []
+    std_content = []
     media_type = ""
 
-    message = request.messages[-1]
-
-    async def handle_image_source(raw: str, client: httpx.AsyncClient) -> str:
-        if raw.startswith("data:"):
-            try:
-                base64_data = raw.split(",", 1)[1]
-            except IndexError as exc:
-                raise HTTPException(status_code=400, detail="图片数据URL格式错误") from exc
-            img_bytes = base64.b64decode(base64_data)
-        else:
-            resp = await client.get(raw)
-            resp.raise_for_status()
-            img_bytes = resp.content
-
-        try:
-            with Image.open(BytesIO(img_bytes)) as img:
-                processed = resize_image(img)
-                processed_format = processed.format or "PNG"
-                save_path = tmp_dir / f"{uuid.uuid4()}.{processed_format.lower()}"
-                processed.save(save_path, format=processed_format, optimize=True)
-                processed.close()
-        except Exception as exc:  # noqa: BLE001
-            raise HTTPException(status_code=400, detail=f"图片处理失败: {exc}") from exc
-
-        cleanup_paths.append(save_path)
-        return str(save_path)
-
-    async def handle_video_source(raw: str, client: httpx.AsyncClient) -> str:
-        if raw.startswith("data:"):
-            try:
-                base64_data = raw.split(",", 1)[1]
-            except IndexError as exc:
-                raise HTTPException(status_code=400, detail="视频数据URL格式错误") from exc
-            video_bytes = base64.b64decode(base64_data)
-            ext = ".mp4"
-        else:
-            resp = await client.get(raw)
-            resp.raise_for_status()
-            video_bytes = resp.content
-            ext = Path(raw.split("?")[0]).suffix or ".mp4"
-        save_path = tmp_dir / f"{uuid.uuid4()}{ext}"
-        save_path.write_bytes(video_bytes)
-        cleanup_paths.append(save_path)
-        return str(save_path)
-
-    try:
-        if isinstance(message.content, list):
-            async with httpx.AsyncClient(timeout=30) as client:
-                for item in message.content:
-                    if item.type == "text" and item.text is not None:
-                        std_content.append({"type": "text", "text": item.text})
-                    elif item.type in {"image_url", "image"}:
-                        source = item.image_url.url if item.image_url else item.image
-                        if not source:
-                            raise HTTPException(status_code=400, detail="图片地址缺失")
-                        save_path = await handle_image_source(source, client)
-                        std_content.append({"type": "image", "image": save_path})
-                        media_type = "image"
-                    elif item.type == "video" and item.video is not None:
-                        save_path = await handle_video_source(item.video, client)
-                        std_content.append(
-                            {
-                                "type": "video",
-                                "video": save_path,
-                                "fps": 1.0,
-                                "min_pixels": 64 * 28 * 28,
-                                "max_pixels": pipeline.model.MAX_PIXELS // 4,
-                            }
-                        )
-                        media_type = "video"
+    if isinstance(request.messages[-1]["content"], list):
+        content = request.messages[-1]["content"]
+        for x in content:
+            if x["type"] == "text":
+                std_content.append(x)
+            elif x["type"] == "image_url":
+                image_url = x["image_url"]["url"]
+                try:
+                    if image_url.startswith("data:"):
+                        save_path = await base64_decode(image_url, tmp_dir)
                     else:
-                        raise HTTPException(status_code=400, detail=f"不支持的消息类型: {item.type}")
-        elif isinstance(message.content, str):
-            std_content.append({"type": "text", "text": message.content})
-        else:
-            raise HTTPException(status_code=400, detail="Invalid content type")
-    except Exception:
-        cleanup(cleanup_paths)
-        raise
+                        save_path = await url_download(image_url, tmp_dir)
+                except Exception as e:
+                    return JSONResponse({"error": f"Error downloading image from {image_url}: {e}"}, status_code=400)
+                std_content.append({"type": "image", "image": save_path})
+                media_type = "image"
+            elif x["type"] == "image":
+                image_url = x["image"]
+                try:
+                    if image_url.startswith("data:"):
+                        save_path = await base64_decode(image_url, tmp_dir)
+                    else:
+                        save_path = await url_download(image_url, tmp_dir)
+                except Exception as e:
+                    return JSONResponse({"error": f"Error downloading image from {image_url}: {e}"}, status_code=400)
+                std_content.append({"type": "image", "image": save_path})
+                media_type = "image"
+            elif x["type"] == "video":
+                video_url = x["video"]
+                try:
+                    save_path = await url_download(video_url, tmp_dir)
+                except Exception as e:
+                    return JSONResponse({"error": f"Error downloading video from {video_url}: {e}"}, status_code=400)
+                std_content.append(
+                    {
+                        "type": "video",
+                        "video": save_path,
+                        "fps": 1.0,
+                        "min_pixels": 64 * 28 * 28,
+                        "max_pixels": slm.model.MAX_PIXELS // 4,
+                    }
+                )
+                media_type = "video"
+    elif isinstance(request.messages[-1]["content"], str):
+        std_content.append({"type": "text", "text": request.messages[-1]["content"]})
+    else:
+        return JSONResponse({"error": "Invalid content type"}, status_code=400)
 
     std_messages = [{"role": "user", "content": std_content}]
 
-    text = pipeline.processor.apply_chat_template(
+    text = slm.processor.apply_chat_template(
         std_messages, tokenize=False, add_generation_prompt=True
     )
     image_inputs, video_inputs = process_vision_info(std_messages)
-    inputs = pipeline.processor(
+    inputs = slm.processor(
         text=[text],
         images=image_inputs,
         videos=video_inputs,
@@ -197,45 +153,44 @@ async def chat_completions(request: ChatRequest):
 
     # Chat
     first_start = time.time()
-    pipeline.model.forward_embed(inputs.input_ids.squeeze(0).tolist())
+    slm.model.forward_embed(inputs.input_ids.squeeze(0).tolist())
     if media_type == "image":
-        vit_token_list = torch.where(inputs.input_ids == pipeline.ID_IMAGE_PAD)[1].tolist()
+        vit_token_list = torch.where(inputs.input_ids == slm.ID_IMAGE_PAD)[1].tolist()
         vit_offset = vit_token_list[0]
-        pipeline.vit_process_image(inputs, vit_offset)
-        position_ids = pipeline.get_rope_index(
-            inputs.input_ids, inputs.image_grid_thw, pipeline.ID_IMAGE_PAD
+        slm.vit_process_image(inputs, vit_offset)
+        position_ids = slm.get_rope_index(
+            inputs.input_ids, inputs.image_grid_thw, slm.ID_IMAGE_PAD
         )
-        pipeline.max_posid = int(position_ids.max())
-        ftoken = pipeline.forward_prefill(position_ids.numpy())
+        slm.max_posid = int(position_ids.max())
+        ftoken = slm.forward_prefill(position_ids.numpy())
     elif media_type == "video":
-        vit_token_list = torch.where(inputs.input_ids == pipeline.ID_VIDEO_PAD)[1].tolist()
+        vit_token_list = torch.where(inputs.input_ids == slm.ID_VIDEO_PAD)[1].tolist()
         vit_offset = vit_token_list[0]
-        pipeline.vit_process_video(inputs, vit_offset)
-        position_ids = pipeline.get_rope_index(
-            inputs.input_ids, inputs.video_grid_thw, pipeline.ID_VIDEO_PAD
+        slm.vit_process_video(inputs, vit_offset)
+        position_ids = slm.get_rope_index(
+            inputs.input_ids, inputs.video_grid_thw, slm.ID_VIDEO_PAD
         )
-        pipeline.max_posid = int(position_ids.max())
-        ftoken = pipeline.forward_prefill(position_ids.numpy())
+        slm.max_posid = int(position_ids.max())
+        ftoken = slm.forward_prefill(position_ids.numpy())
     else:
         position_ids = 3 * [i for i in range(token_len)]
-        pipeline.max_posid = token_len - 1
-        ftoken = pipeline.forward_prefill(np.array(position_ids, dtype=np.int32))
+        slm.max_posid = token_len - 1
+        ftoken = slm.forward_prefill(np.array(position_ids, dtype=np.int32))
     first_end = time.time()
     first_duration = first_end - first_start
     print(f"FTL: {first_duration:.3f} s")
 
     prompt_tokens = token_len
-    if prompt_tokens >= pipeline.model.MAX_INPUT_LENGTH:
-        cleanup(cleanup_paths)
+    if prompt_tokens >= slm.model.MAX_INPUT_LENGTH:
         return JSONResponse(
             {
                 "error": "The maximum question length should be shorter than {} but we get {} instead.".format(
-                    pipeline.model.MAX_INPUT_LENGTH, prompt_tokens
+                    slm.model.MAX_INPUT_LENGTH, prompt_tokens
                 )
             },
             status_code=400,
         )
-    max_tokens = pipeline.model.SEQLEN - prompt_tokens
+    max_tokens = slm.model.SEQLEN - prompt_tokens
 
     created = int(time.time())
     comp_id = f"chatcmpl-{uuid.uuid4().hex}"
@@ -260,15 +215,13 @@ async def chat_completions(request: ChatRequest):
             token = ftoken
             full_word_tokens = []
 
-            while token not in pipeline.ID_EOS and completion_tokens < max_tokens:
+            while token not in ID_EOS and completion_tokens < max_tokens:
                 full_word_tokens.append(token)
-                word = pipeline.tokenizer.decode(
-                    full_word_tokens, skip_special_tokens=True
-                )
+                word = slm.tokenizer.decode(full_word_tokens, skip_special_tokens=True)
                 if "�" not in word:
                     if len(full_word_tokens) == 1:
                         pre_word = word
-                        word = pipeline.tokenizer.decode(
+                        word = slm.tokenizer.decode(
                             [token, token], skip_special_tokens=True
                         )[len(pre_word) :]
                     chunk = {
@@ -286,14 +239,14 @@ async def chat_completions(request: ChatRequest):
                     }
                     yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
                     full_word_tokens = []
-                pipeline.max_posid += 1
+                slm.max_posid += 1
                 position_ids = np.array(
-                    [pipeline.max_posid, pipeline.max_posid, pipeline.max_posid], dtype=np.int32
+                    [slm.max_posid, slm.max_posid, slm.max_posid], dtype=np.int32
                 )
-                token = pipeline.model.forward_next(position_ids)
+                token = slm.model.forward_next(position_ids)
                 completion_tokens += 1
                 await asyncio.sleep(0)
-            pipeline.history_max_posid = pipeline.max_posid + 2
+            slm.history_max_posid = slm.max_posid + 2
             next_end = time.time()
             next_duration = next_end - first_end
             tps = completion_tokens / next_duration
@@ -315,26 +268,24 @@ async def chat_completions(request: ChatRequest):
             yield f"data: {json.dumps(tail, ensure_ascii=False)}\n\n"
             yield "data: [DONE]\n\n"
 
-        response = StreamingResponse(event_stream(), media_type="text/event-stream")
-        response.background = BackgroundTask(cleanup, list(cleanup_paths))
-        return response
+        return StreamingResponse(event_stream(), media_type="text/event-stream")
 
     else:
         full_word_tokens = []
         completion_tokens = 0
         token = ftoken
 
-        while token not in pipeline.ID_EOS and completion_tokens < max_tokens:
+        while token not in ID_EOS and completion_tokens < max_tokens:
             completion_tokens += 1
             full_word_tokens.append(token)
-            pipeline.max_posid += 1
+            slm.max_posid += 1
             position_ids = np.array(
-                [pipeline.max_posid, pipeline.max_posid, pipeline.max_posid], dtype=np.int32
+                [slm.max_posid, slm.max_posid, slm.max_posid], dtype=np.int32
             )
-            token = pipeline.model.forward_next(position_ids)
+            token = slm.model.forward_next(position_ids)
 
-        answer = pipeline.tokenizer.decode(full_word_tokens, skip_special_tokens=True)
-        pipeline.history_max_posid = pipeline.max_posid + 2
+        answer = slm.tokenizer.decode(full_word_tokens, skip_special_tokens=True)
+        slm.history_max_posid = slm.max_posid + 2
         next_end = time.time()
         next_duration = next_end - first_end
         tps = completion_tokens / next_duration
@@ -358,34 +309,54 @@ async def chat_completions(request: ChatRequest):
                 "total_tokens": prompt_tokens + completion_tokens,
             },
         }
-        cleanup(cleanup_paths)
         return JSONResponse(data)
 
 
-def resize_image(img: Image.Image) -> Image.Image:
-    max_width, max_height = 560, 560
-    if img.width <= max_width and img.height <= max_height:
-        return img.convert("RGB") if img.mode not in {"RGB", "RGBA"} else img
+async def url_download(url, dir):
+    if url.startswith("file://"):
+        local_path = url[7:]
+        if os.path.exists(local_path):
+            return os.path.abspath(local_path)
+        else:
+            raise ValueError(f"Local file not found: {local_path}")
+    
+    if os.path.exists(url):
+        return os.path.abspath(url)
+    
+    url_path = url.split("?")[0]
+    _, ext = os.path.splitext(url_path)
+    ext = ext.lower()
+    
+    image_exts = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"}
+    video_exts = {".mp4", ".avi", ".mov", ".mkv", ".flv", ".wmv", ".webm"}
+    
+    if not ext or (ext not in image_exts and ext not in video_exts):
+        supported = ", ".join(sorted(image_exts | video_exts))
+        raise ValueError(f"Unsupported file extension: '{ext}'. Supported formats: {supported}")
+    
+    temp_path = os.path.join(dir, f"temp_{uuid.uuid4()}{ext}")
+    result = subprocess.run(["wget", "-q", url, "-O", temp_path], capture_output=True)
 
-    ratio = min(max_width / img.width, max_height / img.height)
-    new_width = int(img.width * ratio)
-    new_height = int(img.height * ratio)
-    resized = img
-    if ratio < 0.5:
-        intermediate_width = max(1, int(img.width * 0.5))
-        intermediate_height = max(1, int(img.height * 0.5))
-        resized = resized.resize(
-            (intermediate_width, intermediate_height), Image.Resampling.LANCZOS
-        )
-    resized = resized.resize((new_width, new_height), Image.Resampling.LANCZOS)
-    if resized.mode not in {"RGB", "RGBA"}:
-        resized = resized.convert("RGB")
-    return resized
+    if result.returncode != 0:
+        error_msg = result.stderr.decode() if result.stderr else "Unknown error"
+        raise ValueError(f"Failed to download from URL: {url}. Error: {error_msg}")
+    
+    if not os.path.exists(temp_path):
+        raise ValueError(f"Downloaded file does not exist: {temp_path}")
 
+    return temp_path
 
-def cleanup(paths: List[Path]):
-    for path in paths:
-        try:
-            path.unlink(missing_ok=True)
-        except Exception:
-            pass
+async def base64_decode(image_url, tmp_dir):
+    try:
+        if "," not in image_url:
+            raise ValueError("Invalid base64 data URI format. Expected format: 'data:image/...;base64,...'")
+        
+        base64_data = image_url.split(",")[1]
+        img_bytes = base64.b64decode(base64_data)
+        img = Image.open(BytesIO(img_bytes))
+        
+        save_path = os.path.join(tmp_dir, f"{uuid.uuid4()}.png")
+        img.save(save_path, format="PNG", optimize=True)
+        return save_path
+    except Exception as e:
+        raise ValueError(f"Failed to decode base64 image: {e}")
